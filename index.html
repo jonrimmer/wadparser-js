@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      html, body {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      #svgOutput {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <input id="wfInput" type="file">
+      <select id="level"></select>
+    </div>
+    <div id="svgOutput"></div>
+    <script type="module">
+      import { Wad } from './wadparser.js';
+
+      const fr = new FileReader();
+      const wfInput = document.getElementById('wfInput');
+      const svgOutput = document.getElementById('svgOutput');
+      const level = document.getElementById('level');
+      let wad = null;
+
+      const updateLevel = () => {
+        let lnum = parseInt(level.value);
+        if (Number.isFinite(lnum)) {
+          svgOutput.innerHTML = wad.levels[lnum].asSvg();
+        }
+      };
+
+      level.addEventListener('change', updateLevel);
+
+      fr.onload = event => {
+        const buf = event.target.result;
+        wad = new Wad(buf);
+        level.innerHTML = wad.levels.map((l, i) => `<option value="${ i}">${ l.name }</option>`);
+        updateLevel(); 
+      };
+
+      wfInput.addEventListener('change', () => {
+        if (wfInput.files[0]) {
+          fr.readAsArrayBuffer(wfInput.files[0]);
+        }
+      });
+    </script>
+  </body>
+</html>
