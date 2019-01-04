@@ -7,15 +7,19 @@
     "start": "http-server",
     "test": "jest --watch"
   },
-  "keywords": ["Doom", "WAD", "Parser"],
+  "keywords": [
+    "Doom",
+    "WAD",
+    "Parser"
+  ],
   "author": "Jon Rimmer <jon.rimmer@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "babel-core": "^6.26.0",
-    "babel-jest": "^22.4.1",
-    "babel-preset-env": "^1.6.1",
-    "http-server": "^0.11.1",
-    "jest": "^22.4.2",
-    "regenerator-runtime": "^0.11.1"
+    "babel-jest": "23.6.0",
+    "babel-preset-env": "1.7.0",
+    "http-server": "0.11.1",
+    "jest": "23.6.0",
+    "regenerator-runtime": "0.13.1"
   }
 }
