@@ -78,14 +78,24 @@
 
       let handle = null;
 
+      const baseSpeed = 100;
+      let speed = baseSpeed;
+
       play.addEventListener('click', () => {
+        if (handle) {
+          window.clearInterval(handle);
+          speed = speed / 2;
+        } else {
+          speed = baseSpeed;
+        }
+
         handle = window.setInterval(() => {
           showLine.value = parseInt(showLine.value, 10) + 1;
           if (showLine.value === showLine.max) {
             showLine.value = 1;
           }
           updateVisibility();
-        }, 100);
+        }, speed);
       });
 
       stop.addEventListener('click', () => {
