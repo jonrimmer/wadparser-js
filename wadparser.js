@@ -10,7 +10,7 @@ export class Wad {
     let currentLevel = new Level(null);
 
     for (let i = 0; i < this.numLumps; i++) {
-      const lump = new WadDataView(wadfile, dirOffset + (i * 16));
+      const lump = new WadDataView(wadfile, dirOffset + i * 16);
 
       const filepos = lump.getInt32(0, true);
       const size = lump.getInt32(4, true);
@@ -20,13 +20,11 @@ export class Wad {
         if (currentLevel.isValid()) {
           this.levels.push(currentLevel);
         }
-        
+
         currentLevel = new Level(name);
-      }
-      else if (name === 'BEHAVIOR') {
+      } else if (name === 'BEHAVIOR') {
         this.wadFormat = 'HEXEN';
-      }
-      else {
+      } else {
         currentLevel.lumps[name] = new WadDataView(wadfile, filepos, size);
       }
     }
@@ -50,7 +48,9 @@ export class Level {
   }
 
   isValid() {
-    return (this.name != null) && 'VERTEXES' in this.lumps && 'LINEDEFS' in this.lumps;
+    return (
+      this.name != null && 'VERTEXES' in this.lumps && 'LINEDEFS' in this.lumps
+    );
   }
 
   load(wadFormat) {
@@ -60,10 +60,7 @@ export class Level {
     let maxY = Number.NEGATIVE_INFINITY;
 
     for (let data of this.lumps.VERTEXES.packetsOfSize(4)) {
-      let vert = [
-        data.getInt16(0, true),
-        data.getInt16(2, true)
-      ];
+      let vert = [data.getInt16(0, true), data.getInt16(2, true)];
 
       this.vertices.push(vert);
 
@@ -73,52 +70,69 @@ export class Level {
       maxY = Math.max(vert[1], maxY);
     }
 
-    this.lowerLeft = [ minX, minY ];
-    this.upperRight = [ maxX, maxY ];
+    this.lowerLeft = [minX, minY];
+    this.upperRight = [maxX, maxY];
 
-    this.shift = [
-      0 - this.lowerLeft[0],
-      0 - this.lowerLeft[1]
-    ];
+    this.shift = [0 - this.lowerLeft[0], 0 - this.lowerLeft[1]];
 
-    for (let data of this.lumps.LINEDEFS.packetsOfSize(wadFormat == 'HEXEN' ? 16 : 14)) {
+    for (let data of this.lumps.LINEDEFS.packetsOfSize(
+      wadFormat == 'HEXEN' ? 16 : 14
+    )) {
       this.lines.push(new Line(data));
     }
   }
 
   normalize(vert, padding = 5) {
-    return [ this.shift[0] + vert[0] + padding, this.shift[1] + vert[1] + padding ];
+    return [
+      this.shift[0] + vert[0] + padding,
+      this.shift[1] + vert[1] + padding
+    ];
   }
 
-  asSvg() {
-    const viewBoxSize = this.normalize(this.upperRight, 10);
+  asSvg(width, height) {
+    const levelSize = this.normalize(this.upperRight, 10);
 
-    let canvasSize;
+    const padding = 10;
 
-    if (viewBoxSize[0] > viewBoxSize[1]) {
-      canvasSize = [1024, Math.round(1024 * (viewBoxSize[1] / viewBoxSize[0]))];
+    width -= padding * 2;
+    height -= padding * 2;
+
+    let scaleFactor = 0;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    if (width / levelSize[0] < height / levelSize[1]) {
+      // Needs to be shrunk more horizontally
+      scaleFactor = width / levelSize[0];
+      yOffset = (height - levelSize[1] * scaleFactor) / 2;
+    } else {
+      // Needs to be shrunk more vertically
+      scaleFactor = height / levelSize[1];
+      xOffset = (width - levelSize[0] * scaleFactor) / 2;
     }
-    else {
-      canvasSize = [Math.round((viewBoxSize[0] / viewBoxSize[1]) * 1024), 1024];
-    }
+
+    const scale = pos => {
+      return [pos[0] * scaleFactor + xOffset, pos[1] * scaleFactor + yOffset];
+    };
 
     return `
       <svg
-        width="${ canvasSize[0] }"
-        height="${ canvasSize[1] }"
-        viewBox="0 0 ${ viewBoxSize[0] + ' ' + viewBoxSize[1] }">
-        ${
-          this.lines.map(l => {
-            const a = this.normalize(this.vertices[l.a]);
-            const b = this.normalize(this.vertices[l.b]);
+        width="${width}"
+        height="${height}"
+      >
+        ${this.lines
+          .map(l => {
+            const a = scale(this.normalize(this.vertices[l.a]));
+            const b = scale(this.normalize(this.vertices[l.b]));
 
             return `<line
-              x1="${ a[0] }" y1="${ a[1] }"
-              x2="${ b[0] }" y2="${ b[1] }"
-              stroke="${ l.isOneSided ? '#333' : '#999' }"
-              stroke-width="${ l.isOneSided ? 10 : 3 }"/>`}).join('')
-        }
-      </svg>`
+              x1="${a[0]}" y1="${a[1]}"
+              x2="${b[0]}" y2="${b[1]}"
+              class="${l.isOneSided ? 'one-sided' : 'two-sided '}"
+            />`;
+          })
+          .join('')}
+      </svg>`;
   }
 }
 
@@ -136,7 +150,7 @@ export class WadDataView extends DataView {
       if (val === 0) {
         return result;
       }
-      
+
       result += String.fromCharCode(val);
     }
 
@@ -144,7 +158,11 @@ export class WadDataView extends DataView {
   }
 
   setInt16(offset, value) {
-    return super.setInt16(offset < 0 ? this.byteLength + offset : offset, value, true);
+    return super.setInt16(
+      offset < 0 ? this.byteLength + offset : offset,
+      value,
+      true
+    );
   }
 
   getInt16(offset) {

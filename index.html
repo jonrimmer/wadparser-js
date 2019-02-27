@@ -1,12 +1,15 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <style>
-      html, body {
+      html,
+      body {
         width: 100%;
         height: 100%;
         padding: 0;
         margin: 0;
+        font-family: sans-serif;
+        font-size: 11px;
       }
 
       body {
@@ -19,19 +22,47 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 10px;
       }
-      
+
       line {
         stroke-linecap: round;
+        visibility: hidden;
+      }
+
+      line.one-sided {
+        stroke: #000;
+      }
+
+      line.two-sided {
+        stroke: #aaa;
+      }
+
+      header {
+        display: grid;
+        background-color: #f0f0f0;
+        padding: 4px 12px;
+        grid-gap: 12px;
+        grid-auto-flow: column;
+        grid-template-columns: auto auto auto 1fr auto auto;
+        grid-template-rows: auto;
+        justify-content: start;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #level {
+        min-width: 100px;
       }
     </style>
   </head>
   <body>
-    <div>
-      <input id="wfInput" type="file">
-      <select id="level"></select>
-    </div>
+    <header>
+      Wad: <input id="wfInput" type="file" />
+      <select id="level" disabled></select>
+      <input id="showLine" type="range" min="1" disabled />
+      <button id="stop" disabled>■</button>
+      <button id="play" disabled>▶</button>
+    </header>
     <div id="svgOutput"></div>
     <script type="module">
       import { Wad } from './wadparser.js';
@@ -40,12 +71,38 @@
       const wfInput = document.getElementById('wfInput');
       const svgOutput = document.getElementById('svgOutput');
       const level = document.getElementById('level');
+      const showLine = document.getElementById('showLine');
+      const play = document.getElementById('play');
+      const stop = document.getElementById('stop');
       let wad = null;
+
+      let handle = null;
+
+      play.addEventListener('click', () => {
+        handle = window.setInterval(() => {
+          showLine.value = parseInt(showLine.value, 10) + 1;
+          if (showLine.value === showLine.max) {
+            showLine.value = 1;
+          }
+          updateVisibility();
+        }, 100);
+      });
+
+      stop.addEventListener('click', () => {
+        window.clearInterval(handle);
+        handle = null;
+      });
 
       const updateLevel = () => {
         let lnum = parseInt(level.value);
         if (Number.isFinite(lnum)) {
-          svgOutput.innerHTML = wad.levels[lnum].asSvg();
+          const { width, height } = svgOutput.getBoundingClientRect();
+          svgOutput.innerHTML = wad.levels[lnum].asSvg(width, height);
+          showLine.max = wad.levels[lnum].lines.length;
+          stop.disabled = play.disabled = showLine.disabled = false;
+
+          showLine.value = showLine.max;
+          updateVisibility();
         }
       };
 
@@ -54,15 +111,32 @@
       fr.onload = event => {
         const buf = event.target.result;
         wad = new Wad(buf);
-        level.innerHTML = wad.levels.map((l, i) => `<option value="${ i}">${ l.name }</option>`);
-        updateLevel(); 
+        level.innerHTML = wad.levels.map(
+          (l, i) => `<option value="${i}">${l.name}</option>`
+        );
+        updateLevel();
       };
 
       wfInput.addEventListener('change', () => {
         if (wfInput.files[0]) {
           fr.readAsArrayBuffer(wfInput.files[0]);
+          level.disabled = false;
         }
       });
+
+      let lineRuleIndex = -1;
+
+      const updateVisibility = () => {
+        if (lineRuleIndex > -1) {
+          document.styleSheets[0].deleteRule(lineRuleIndex);
+        }
+
+        lineRuleIndex = document.styleSheets[0].insertRule(`
+          svg line:nth-child(-n+${showLine.value}) { visibility: visible; }
+        `);
+      };
+
+      showLine.addEventListener('change', updateVisibility);
     </script>
   </body>
 </html>
