@@ -112,7 +112,10 @@ export class Level {
     }
 
     const scale = pos => {
-      return [pos[0] * scaleFactor + xOffset, pos[1] * scaleFactor + yOffset];
+      return [
+        pos[0] * scaleFactor + xOffset,
+        height - (pos[1] * scaleFactor + yOffset)
+      ];
     };
 
     return `
